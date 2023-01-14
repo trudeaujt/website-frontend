@@ -1,0 +1,72 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: website-frontend
+  labels:
+    app: website-frontend
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: website-frontend
+  template:
+    metadata:
+      labels:
+        app: website-frontend
+    spec:
+      containers:
+      - name: website-frontend-container
+        image: trudeaujt/website-frontend:latest
+        ports:
+        - name: http
+          containerPort: 80
+        livenessProbe:
+          httpGet:
+            scheme: HTTP
+            path: /
+            port: 80
+          initialDelaySeconds: 30
+          timeoutSeconds: 30
+      imagePullSecrets:
+      - name: regcred
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: website-frontend
+  labels:
+    app: website-frontend
+spec:
+  selector:
+    app: website-frontend
+  ports:
+  - name: http
+    protocol: TCP
+    port: 80
+    targetPort: 80
+  sessionAffinity: None
+  type: ClusterIP
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/affinity: "cookie"
+    nginx.ingress.kubernetes.io/session-cookie-name: "jon.codes"
+    nginx.ingress.kubernetes.io/session-cookie-expires: "172800"
+    nginx.ingress.kubernetes.io/session-cookie-max-age: "172800"
+  name: website-ingress
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: jon.codes
+    http:
+      paths:
+      - backend:
+          service:
+            name: website-frontend
+            port:
+              number: 80
+        path: /
+        pathType: Prefix
